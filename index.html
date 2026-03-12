@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enki.ai — AI Email Automation Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <script>
+    try {
+      if (localStorage.getItem('enki-theme') === 'light')
+        document.documentElement.classList.add('light');
+    } catch(e) {}
+  </script>
+
+  <style>
+  body.login-active { overflow: hidden; }
+
+  #login-gate {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: #080c14;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  #login-gate.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  #login-gate::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(245,158,11,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,158,11,.035) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: lgrid 20s linear infinite;
+  }
+  @keyframes lgrid {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 60px 60px, 60px 60px; }
+  }
+
+  .l-orb { position: absolute; border-radius: 50%; filter: blur(100px); pointer-events: none; }
+  .l-orb-1 { width:600px;height:600px;top:-150px;left:-100px;background:radial-gradient(circle,rgba(245,158,11,.10) 0%,transparent 70%);animation:lo1 12s ease-in-out infinite; }
+  .l-orb-2 { width:500px;height:500px;bottom:-100px;right:-80px;background:radial-gradient(circle,rgba(59,130,246,.10) 0%,transparent 70%);animation:lo2 15s ease-in-out infinite; }
+  .l-orb-3 { width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(139,92,246,.07) 0%,transparent 70%);animation:lo3 10s ease-in-out infinite; }
+  @keyframes lo1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,30px) scale(1.05)} }
+  @keyframes lo2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,-40px) scale(1.08)} }
+  @keyframes lo3 { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5} 50%{transform:translate(-50%,-50%) scale(1.3);opacity:1} }
+
+  .login-particles { position:absolute;inset:0;overflow:hidden;pointer-events:none; }
+  .lp { position:absolute;border-radius:50%;background:rgba(245,158,11,.4);animation:lpd linear infinite; }
+  @keyframes lpd {
+    from { transform:translateY(0) translateX(0);opacity:0 }
+    10%  { opacity:1 }
+    90%  { opacity:.3 }
+    to   { transform:translateY(-120vh) translateX(var(--dx));opacity:0 }
+  }
+
+  .l-card {
+    position: relative; z-index: 2;
+    width: min(420px, 92vw);
+    padding: 44px 40px 36px;
+    background: rgba(13,20,32,.70);
+    backdrop-filter: blur(32px) saturate(1.6);
+    -webkit-backdrop-filter: blur(32px) saturate(1.6);
+    border: 1px solid rgba(245,158,11,.22);
+    border-radius: 22px;
+    box-shadow:
+      0 0 0 1px rgba(245,158,11,.05),
+      0 32px 80px rgba(0,0,0,.65),
+      0 0 60px rgba(245,158,11,.05),
+      inset 0 1px 0 rgba(255,255,255,.04);
+    text-align: center;
+    animation: cardIn .8s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes cardIn {
+    from { opacity:0; transform:translateY(24px) scale(.97) }
+    to   { opacity:1; transform:translateY(0) scale(1) }
+  }
+  .l-card::before {
+    content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:55%; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(245,158,11,.8) 40%,rgba(245,158,11,1) 50%,rgba(245,158,11,.8) 60%,transparent);
+  }
+
+  .l-success {
+    position:absolute; inset:0; border-radius:22px;
+    background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.3);
+    opacity:0; pointer-events:none; transition:opacity .3s;
+  }
+  .l-success.flash { opacity:1; }
+
+  .l-brand-wrap {
+    display:inline-flex; align-items:center; gap:12px;
+    margin-bottom:8px; animation:fu .6s .05s both;
+    justify-content: center;
+  }
+  .l-logo {
+    width:46px; height:46px; border-radius:13px;
+    background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.28);
+    display:flex; align-items:center; justify-content:center; font-size:24px;
+    box-shadow:0 0 24px rgba(245,158,11,.18);
+  }
+  .l-brand { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:#e2e8f0; letter-spacing:-.5px; }
+  .l-brand span { color:#f59e0b; }
+
+  .l-tagline {
+    font-family:'DM Mono',monospace; font-size:10.5px; color:#475569;
+    letter-spacing:.09em; text-transform:uppercase;
+    margin-bottom:28px; animation:fu .6s .12s both;
+  }
+  .l-title {
+    font-family:'Syne',sans-serif; font-size:28px; font-weight:700;
+    color:#e2e8f0; line-height:1.2; margin-bottom:6px; animation:fu .6s .18s both;
+  }
+  .l-title em { font-style:italic; color:#f59e0b; font-family:'Instrument Serif',serif; }
+  .l-subtitle { font-size:13px; color:#64748b; margin-bottom:32px; animation:fu .6s .22s both; }
+
+  .l-form { animation:fu .6s .28s both; }
+
+  .l-field { margin-bottom:16px; text-align:left; }
+  .l-field label {
+    display:block; font-family:'DM Mono',monospace; font-size:10.5px; font-weight:500;
+    color:#94a3b8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px;
+  }
+  .l-field-inner { position:relative; display:flex; align-items:center; }
+  .l-field-icon {
+    position:absolute; left:14px; font-size:15px;
+    pointer-events:none; opacity:.55;
+  }
+  .l-input {
+    width:100%; padding:12px 14px 12px 42px;
+    background:rgba(8,12,20,.75); border:1px solid rgba(30,45,66,.9);
+    border-radius:10px; color:#e2e8f0;
+    font-family:'DM Mono',monospace; font-size:14px;
+    text-align:left;
+    outline:none; transition:border-color .2s, box-shadow .2s, background .2s;
+  }
+  .l-input::placeholder { color:#334155; text-align:left; }
+  .l-input:focus {
+    border-color:rgba(245,158,11,.55);
+    background:rgba(8,12,20,.9);
+    box-shadow:0 0 0 3px rgba(245,158,11,.09), 0 0 20px rgba(245,158,11,.06);
+  }
+
+  .l-eye {
+    position:absolute; right:10px;
+    background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.18);
+    border-radius:7px; color:#94a3b8; cursor:pointer;
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    transition:background .2s, color .2s, border-color .2s;
+    flex-shrink:0;
+  }
+  .l-eye:hover { background:rgba(245,158,11,.18); color:#f59e0b; border-color:rgba(245,158,11,.4); }
+  .l-eye svg { display:block; pointer-events:none; }
+
+  .l-error {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:10px 14px;
+    background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.22);
+    border-radius:8px; color:#f87171;
+    font-family:'DM Mono',monospace; font-size:12px;
+    margin-bottom:14px;
+    opacity:0; transform:translateY(-4px);
+    transition:opacity .3s, transform .3s; pointer-events:none;
+  }
+  .l-error.visible { opacity:1; transform:translateY(0); pointer-events:auto; }
+
+  .l-btn {
+    width:100%; margin-top:6px; padding:14px;
+    background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);
+    border:none; border-radius:10px;
+    color:#080c14; font-family:'Syne',sans-serif; font-size:14.5px; font-weight:700;
+    letter-spacing:.04em; cursor:pointer;
+    position:relative; overflow:hidden;
+    transition:transform .15s, box-shadow .2s;
+    box-shadow:0 4px 20px rgba(245,158,11,.28);
+  }
+  .l-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 8px 30px rgba(245,158,11,.38); }
+  .l-btn:active:not(:disabled) { transform:translateY(0); }
+  .l-btn:disabled { opacity:.7; cursor:not-allowed; }
+  .l-btn::before {
+    content:''; position:absolute; top:0; left:-100%; width:60%; height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+    transition:left .5s ease;
+  }
+  .l-btn:hover::before { left:160%; }
+  .l-btn-inner { display:flex; align-items:center; justify-content:center; gap:8px; }
+
+  .l-spinner {
+    display:none; width:16px; height:16px;
+    border:2px solid rgba(8,12,20,.3); border-top-color:#080c14;
+    border-radius:50%; animation:spin .7s linear infinite;
+  }
+  .l-btn.loading .l-spinner { display:block; }
+  .l-btn.loading .btn-text { display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .l-footer {
+    margin-top:28px; padding-top:18px;
+    border-top:1px solid rgba(30,45,66,.55);
+    display:flex; align-items:center; justify-content:space-between;
+    animation:fu .6s .38s both;
+  }
+  .l-conf { display:flex; align-items:center; gap:7px; font-family:'DM Mono',monospace; font-size:10px; color:#334155; letter-spacing:.07em; text-transform:uppercase; }
+  .l-dot { width:6px;height:6px;border-radius:50%;background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.6);animation:dotpulse 2s ease-in-out infinite; }
+  @keyframes dotpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+  .l-ver { font-family:'DM Mono',monospace; font-size:10px; color:#1e2d42; }
+
+  @keyframes fu {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)}
+  }
+  .l-card.shake { animation:shake .4s ease; }
+  </style>
+</head>
+<body class="login-active">
+
+<div id="login-gate">
+  <div class="l-orb l-orb-1"></div>
+  <div class="l-orb l-orb-2"></div>
+  <div class="l-orb l-orb-3"></div>
+  <div class="login-particles" id="login-particles"></div>
+
+  <div class="l-card" id="login-card">
+    <div class="l-success" id="login-success-overlay"></div>
+
+    <div class="l-brand-wrap">
+      <div class="l-logo">&#9889;</div>
+      <div class="l-brand">Enki<span>.ai</span></div>
+    </div>
+    <div class="l-tagline">AI Email Automation &middot; Confidential</div>
+
+    <div class="l-title">Welcome <em>back</em></div>
+    <div class="l-subtitle">Sign in to access the documentation portal</div>
+
+    <form class="l-form" id="login-form" onsubmit="handleLogin(event)">
+
+      <div class="l-field">
+        <label for="login-user">Username</label>
+        <div class="l-field-inner">
+          <span class="l-field-icon">&#128100;</span>
+          <input type="text" id="login-user" class="l-input"
+            placeholder="Enter username" autocomplete="username"
+            spellcheck="false" required/>
+        </div>
+      </div>
+
+      <div class="l-field">
+        <label for="login-pass">Password</label>
+        <div class="l-field-inner">
+          <span class="l-field-icon">&#128273;</span>
+          <input type="password" id="login-pass" class="l-input"
+            placeholder="Enter password" autocomplete="current-password"
+            style="padding-right:52px;" required/>
+          <button type="button" class="l-eye" id="eye-btn" title="Show / hide password">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="l-error" id="login-error">
+        <span>&#9888;</span>
+        <span id="login-error-msg">Invalid credentials. Please try again.</span>
+      </div>
+
+      <button type="submit" class="l-btn" id="login-btn">
+        <div class="l-btn-inner">
+          <div class="l-spinner"></div>
+          <span class="btn-text">Access Documentation &rarr;</span>
+        </div>
+      </button>
+    </form>
+
+    <div class="l-footer">
+      <div class="l-conf"><div class="l-dot"></div>Confidential</div>
+      <div class="l-ver">v2.0 &middot; March 2026</div>
+    </div>
+  </div>
+</div>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="nav-logo">⚡</div>
+    <span class="brand-text">Enki.ai</span>
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="#team">Team</a></li>
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#workflows">Workflows</a></li>
+    <li><a href="#tracking">Tracking</a></li>
+    <li><a href="#data">Data</a></li>
+  </ul>
+
+  <div class="nav-right">
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle light / dark mode">
+      <span id="theme-icon">☀️</span>
+      <span id="theme-label" class="theme-label-text">Light</span>
+    </button>
+    <span class="nav-badge">v2.0 · Live</span>
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#team"         onclick="closeMenu()">👥 Team</a>
+  <a href="#stack"        onclick="closeMenu()">⚙️ Tech Stack</a>
+  <a href="#architecture" onclick="closeMenu()">🏗️ Architecture</a>
+  <a href="#workflows"    onclick="closeMenu()">🔄 Workflows</a>
+  <a href="#tracking"     onclick="closeMenu()">📡 Tracking</a>
+  <a href="#data"         onclick="closeMenu()">📊 Data Records</a>
+</div>
+
+<div class="wrapper">
+
+  <div class="hero">
+    <div class="hero-tag fade-up">Technical Documentation · Enki.ai</div>
+
+    <h1 class="fade-up delay-1">
+      AI-Powered<br/>
+      <em>Email Automation</em><br/>
+      Platform
+    </h1>
+
+    <p class="hero-sub fade-up delay-2">
+      A fully automated outreach and intelligence-tracking system that generates
+      personalized research emails, tracks opens in real-time, and syncs all
+      engagement data into HubSpot CRM.
+    </p>
+
+    <div class="hero-team fade-up delay-2" id="team">
+      <div class="team-card">
+        <div class="team-avatar ceo">EE</div>
+        <div>
+          <div class="team-name">Erhan Eren</div>
+          <div class="team-role">Chief Executive Officer</div>
+          <div class="team-company">Enki.ai</div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar mktg">MB</div>
+        <div>
+          <div class="team-name">Melissa Borjal</div>
+          <div class="team-role">Head of Marketing Operations</div>
+          <div class="team-company">Enki.ai</div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar dev">JA</div>
+        <div>
+          <div class="team-name">Jim Christian Ayco</div>
+          <div class="team-role">Automation Developer</div>
+          <div class="team-company">Enki.ai</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-meta fade-up delay-3">
+      <div class="meta-item">🌐 <strong>enki.ai</strong></div>
+      <div class="meta-sep"></div>
+      <div class="meta-item">📅 Updated: <strong>March 2026</strong></div>
+      <div class="meta-sep"></div>
+      <div class="meta-item">📄 <strong>Confidential</strong></div>
+    </div>
+  </div>
+
+  <div class="stats-grid fade-up delay-4">
+    <div class="stat-card amber">
+      <span class="stat-icon">⚡</span>
+      <div class="stat-num">4</div>
+      <div class="stat-label">Automation Workflows</div>
+    </div>
+    <div class="stat-card blue">
+      <span class="stat-icon">🤖</span>
+      <div class="stat-num">2</div>
+      <div class="stat-label">AI Engines</div>
+    </div>
+    <div class="stat-card green">
+      <span class="stat-icon">📡</span>
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Open Tracking</div>
+    </div>
+    <div class="stat-card purple">
+      <span class="stat-icon">🔄</span>
+      <div class="stat-num">1hr</div>
+      <div class="stat-label">HubSpot Sync</div>
+    </div>
+  </div>
+
+  <section id="stack">
+    <div class="section-label">01 — Technology</div>
+    <h2>Technology Stack</h2>
+    <p class="section-desc">
+      Six integrated technologies forming the complete automation pipeline,
+      from AI generation to CRM logging.
+    </p>
+
+    <div class="stack-grid">
+      <div class="stack-card">
+        <span class="stack-emoji">🤖</span>
+        <div class="stack-title">AI Engine</div>
+        <div class="stack-sub">Claude / Gemini</div>
+        <span class="stack-tag tag-amber">Email Generation · Personalization</span>
+      </div>
+      <div class="stack-card">
+        <span class="stack-emoji">⚙️</span>
+        <div class="stack-title">Automation Engine</div>
+        <div class="stack-sub">n8n Workflow Platform</div>
+        <span class="stack-tag tag-blue">4 Active Workflows · Event-driven</span>
+      </div>
+      <div class="stack-card">
+        <span class="stack-emoji">📊</span>
+        <div class="stack-title">Campaign Database</div>
+        <div class="stack-sub">Google Sheets</div>
+        <span class="stack-tag tag-green">3 Tabs · Live Records</span>
+      </div>
+      <div class="stack-card">
+        <span class="stack-emoji">📧</span>
+        <div class="stack-title">Email Delivery</div>
+        <div class="stack-sub">Gmail API</div>
+        <span class="stack-tag tag-purple">Thread Tracking · OAuth2</span>
+      </div>
+      <div class="stack-card">
+        <span class="stack-emoji">📈</span>
+        <div class="stack-title">CRM</div>
+        <div class="stack-sub">HubSpot</div>
+        <span class="stack-tag tag-amber">Contact Sync · Engagement Logs</span>
+      </div>
+      <div class="stack-card">
+        <span class="stack-emoji">🔎</span>
+        <div class="stack-title">Email Tracking</div>
+        <div class="stack-sub">TrackingID Pixel System</div>
+        <span class="stack-tag tag-blue">Webhook · Dedup · Open Count</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <div class="section-label">02 — Architecture</div>
+    <h2>System Architecture</h2>
+    <p class="section-desc">
+      End-to-end flow from lead capture through to CRM activity logging.
+    </p>
+
+    <div class="arch-flow">
+      <div class="flow-row">
+        <div class="flow-node">
+          <span class="icon">📥</span>
+          HubSpot Form Submission
+          <span class="stack-tag tag-amber">Trigger</span>
+        </div>
+      </div>
+      <div class="flow-arrow"><div class="flow-arrow-line"></div><div class="flow-arrow-head"></div></div>
+
+      <div class="flow-row">
+        <div class="flow-node">
+          <span class="icon">🤖</span> AI Email Generation
+          <span class="flow-label">Claude / Gemini</span>
+        </div>
+      </div>
+      <div class="flow-arrow"><div class="flow-arrow-line"></div><div class="flow-arrow-head"></div></div>
+
+      <div class="flow-row">
+        <div class="flow-node">
+          <span class="icon">📧</span> Send via Gmail
+          <span class="flow-label">+ TrackingID pixel embedded</span>
+        </div>
+      </div>
+      <div class="flow-arrow"><div class="flow-arrow-line"></div><div class="flow-arrow-head"></div></div>
+
+      <div class="flow-row">
+        <div class="flow-node">
+          <span class="icon">📊</span> Save to Google Sheets
+          <span class="flow-label">Campaign Record</span>
+        </div>
+      </div>
+      <div class="flow-arrow"><div class="flow-arrow-line"></div><div class="flow-arrow-head"></div></div>
+
+      <div class="flow-row">
+        <div class="flow-node">
+          <span class="icon">📡</span> Email Opened → Webhook Fires
+          <span class="stack-tag tag-green">Event</span>
+        </div>
+      </div>
+      <div class="flow-arrow"><div class="flow-arrow-line"></div><div class="flow-arrow-head"></div></div>
+
+      <div class="flow-row" style="gap:16px;">
+        <div class="flow-node"><span class="icon">🔄</span> Update Database</div>
+        <span style="color:var(--text4);font-size:20px;align-self:center;">→</span>
+        <div class="flow-node">
+          <span class="icon">📈</span> Sync to HubSpot CRM
+          <span class="stack-tag tag-purple">Every 1hr</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflows">
+    <div class="section-label">03 — Workflows</div>
+    <h2>Automation Workflows</h2>
+    <p class="section-desc">
+      Four interconnected workflows covering the complete email campaign lifecycle.
+    </p>
+
+    <div class="workflows-grid">
+
+      <div class="wf-card">
+        <div class="wf-header">
+          <div class="wf-num amber">01</div>
+          <div>
+            <div class="wf-title">Email Campaign Automation</div>
+            <div class="wf-purpose">Sends AI-personalized research emails on article download</div>
+          </div>
+        </div>
+        <div class="wf-body">
+          <ul class="wf-steps">
+            <li class="wf-step"><div class="step-dot amber">1</div> Detect HubSpot form submission</li>
+            <li class="wf-step"><div class="step-dot amber">2</div> Extract email address &amp; article title</li>
+            <li class="wf-step"><div class="step-dot amber">3</div> Generate personalized email via AI</li>
+            <li class="wf-step"><div class="step-dot amber">4</div> Embed TrackingID pixel in email body</li>
+            <li class="wf-step"><div class="step-dot amber">5</div> Send email via Gmail API</li>
+            <li class="wf-step"><div class="step-dot amber">6</div> Store campaign record in Google Sheets</li>
+          </ul>
+          <div class="wf-output">
+            <span class="output-badge tag-green">📧 Research email sent</span>
+            <span class="output-badge tag-amber">📊 Campaign record created</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-card">
+        <div class="wf-header">
+          <div class="wf-num blue">02</div>
+          <div>
+            <div class="wf-title">Follow-Up Automation</div>
+            <div class="wf-purpose">Automatically re-engages contacts who haven't replied</div>
+          </div>
+        </div>
+        <div class="wf-body">
+          <div class="wf-timeline">
+            <div class="timeline-row">
+              <span class="tl-day">Day 0</span>
+              <div class="tl-line"></div>
+              <span class="tl-event">📧 Initial Email Sent</span>
+            </div>
+            <div class="timeline-row">
+              <span class="tl-day">Day 7</span>
+              <div class="tl-line"></div>
+              <span class="tl-event">🔁 Follow-Up Email</span>
+            </div>
+            <div class="timeline-row">
+              <span class="tl-day">Day 10–21</span>
+              <div class="tl-line"></div>
+              <span class="tl-event">📊 Scenario Follow-Up</span>
+            </div>
+          </div>
+          <ul class="wf-steps">
+            <li class="wf-step"><div class="step-dot blue">1</div> Check reply status in Google Sheets</li>
+            <li class="wf-step"><div class="step-dot blue">2</div> Generate AI scenario follow-up email</li>
+            <li class="wf-step"><div class="step-dot blue">3</div> Send in same Gmail thread</li>
+            <li class="wf-step"><div class="step-dot blue">4</div> Update follow-up record</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="wf-card">
+        <div class="wf-header">
+          <div class="wf-num green">03</div>
+          <div>
+            <div class="wf-title">Email Open Tracking</div>
+            <div class="wf-purpose">Captures open events in real-time via pixel webhook</div>
+          </div>
+        </div>
+        <div class="wf-body">
+          <ul class="wf-steps">
+            <li class="wf-step"><div class="step-dot green">1</div> Tracking pixel fires when email opened</li>
+            <li class="wf-step"><div class="step-dot green">2</div> Webhook extracts TrackingID</li>
+            <li class="wf-step"><div class="step-dot green">3</div> Validate: not sender preview (&lt; 2 min)</li>
+            <li class="wf-step"><div class="step-dot green">4</div> Validate: not duplicate (&lt; 30 sec)</li>
+            <li class="wf-step"><div class="step-dot green">5</div> Increment open count in Google Sheets</li>
+            <li class="wf-step"><div class="step-dot green">6</div> Log open activity to HubSpot</li>
+          </ul>
+          <div class="wf-output">
+            <span class="output-badge tag-green">✅ Dedup protected</span>
+            <span class="output-badge tag-amber">📊 Open count tracked</span>
+            <span class="output-badge tag-blue">📈 HubSpot logged</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-card">
+        <div class="wf-header">
+          <div class="wf-num purple">04</div>
+          <div>
+            <div class="wf-title">HubSpot CRM Sync</div>
+            <div class="wf-purpose">Hourly sync of all campaign activity to HubSpot</div>
+          </div>
+        </div>
+        <div class="wf-body">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+            <span class="output-badge tag-purple">⏱ Runs every 1 hour</span>
+            <span class="output-badge tag-amber">🔄 Scheduled trigger</span>
+          </div>
+          <ul class="wf-steps">
+            <li class="wf-step"><div class="step-dot purple">1</div> Read all campaign records from Sheets</li>
+            <li class="wf-step"><div class="step-dot purple">2</div> Filter: activity not yet synced to CRM</li>
+            <li class="wf-step"><div class="step-dot purple">3</div> Create or update HubSpot contact</li>
+            <li class="wf-step"><div class="step-dot purple">4</div> Log EMAIL engagement with metadata</li>
+            <li class="wf-step"><div class="step-dot purple">5</div> Mark record as synced in Sheets</li>
+          </ul>
+          <div class="wf-output">
+            <span class="output-badge tag-purple">🆔 Contact ID stored</span>
+            <span class="output-badge tag-green">📋 Activity logged</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="tracking">
+    <div class="section-label">04 — Tracking</div>
+    <h2>Email Tracking System</h2>
+    <p class="section-desc">
+      Invisible 1×1 pixel embedded in every email that fires a webhook
+      the moment a recipient opens it.
+    </p>
+
+    <div class="tracking-visual">
+      <div class="track-panel">
+        <div class="track-title">Pixel Implementation</div>
+        <div class="code-block">
+<span class="cmt">&lt;!-- Hidden tracking pixel --&gt;</span>
+<span class="kw">&lt;img</span>
+  <span class="prop">src</span>=<span class="str">"https://server/webhook/
+       email-open?id=trk_xxxxx"</span>
+  <span class="prop">width</span>=<span class="str">"1"</span>
+  <span class="prop">height</span>=<span class="str">"1"</span>
+  <span class="prop">style</span>=<span class="str">"display:none"</span>
+<span class="kw">/&gt;</span>
+
+<span class="cmt">// TrackingID format:</span>
+<span class="str">trk_{timestamp}_{contactId}_{rand}</span>
+        </div>
+        <div class="track-alert">
+          <strong>🛡️ Anti-false-positive logic:</strong><br/>
+          Opens within <strong>2 minutes</strong> of send are ignored (sender preview filter).
+          Opens within <strong>30 seconds</strong> of last open are ignored (duplicate filter).
+        </div>
+      </div>
+
+      <div class="track-panel">
+        <div class="track-title">Open Event Flow</div>
+        <div class="mini-flow">
+          <div class="mini-step"><div class="mini-step-num">1</div> Email delivered with embedded pixel</div>
+          <div class="mini-arrow">↓</div>
+          <div class="mini-step"><div class="mini-step-num">2</div> Recipient opens → pixel loads</div>
+          <div class="mini-arrow">↓</div>
+          <div class="mini-step"><div class="mini-step-num">3</div> Webhook fires with TrackingID</div>
+          <div class="mini-arrow">↓</div>
+          <div class="mini-step"><div class="mini-step-num">4</div> Safety checks run (dedup + preview)</div>
+          <div class="mini-arrow">↓</div>
+          <div class="mini-step"><div class="mini-step-num">5</div> Google Sheets open count updated</div>
+          <div class="mini-arrow">↓</div>
+          <div class="mini-step"><div class="mini-step-num">6</div> HubSpot NOTE engagement created</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="data">
+    <div class="section-label">05 — Data</div>
+    <h2>Campaign Data Records</h2>
+    <p class="section-desc">
+      Google Sheets acts as the live campaign database across three structured tabs.
+      Contact info blurred for privacy.
+    </p>
+
+    <div class="records-grid">
+      <div class="record-card">
+        <div class="record-header">
+          <span class="record-icon">📊</span>
+          <div class="record-title">Email Campaign Record</div>
+        </div>
+        <div class="record-body">
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">Email</div><div class="row-val row-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4f2c20213b2e2c3b0f2c20223f2e2136612c2022">[email&#160;protected]</a></div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">HubSpotContactID</div><div class="row-val">454647561932</div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">ArticleTitle</div><div class="row-val">AI Power 2026…</div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">SentAt</div><div class="row-val">2026-03-10T19:04Z</div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">SyncStatus</div><div class="row-val"><span class="cell-badge badge-success">success</span></div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">OpenedAt</div><div class="row-val">2026-03-11T19:04Z</div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">OpenCount</div><div class="row-val">1</div></div>
+          <div class="record-row"><div class="row-dot amber"></div><div class="row-key">TrackingID</div><div class="row-val">trk_177324…_9440</div></div>
+        </div>
+      </div>
+      <div class="record-card">
+        <div class="record-header">
+          <span class="record-icon">📋</span>
+          <div class="record-title">Follow-Up Record</div>
+        </div>
+        <div class="record-body">
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">Email</div><div class="row-val row-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c3a0acadb7a2a0b783a0acaeb3a2adbaeda0acae">[email&#160;protected]</a></div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">FollowUpSent</div><div class="row-val">yes</div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">FollowUpSentAt</div><div class="row-val">2026-03-11T11:49Z</div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">FollowUpResendSent</div><div class="row-val">no</div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">HasReplied</div><div class="row-val">—</div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">FollowUpTrackingID</div><div class="row-val">trk_177322…_8006</div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">FollowUpOpenedAt</div><div class="row-val">2026-03-12T00:15Z</div></div>
+          <div class="record-row"><div class="row-dot blue"></div><div class="row-key">FollowUpMessageId</div><div class="row-val">19cdcbb7…</div></div>
+        </div>
+      </div>
+      <div class="record-card">
+        <div class="record-header">
+          <span class="record-icon">📈</span>
+          <div class="record-title">HubSpot Sync Record</div>
+        </div>
+        <div class="record-body">
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">Email</div><div class="row-val row-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8be8e4e5ffeae8ffcbe8e4e6fbeae5f2a5e8e4e6">[email&#160;protected]</a></div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">HubSpotContactID</div><div class="row-val">454647561932</div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">ArticleTitle</div><div class="row-val">AI Power 2026…</div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">SyncStatus</div><div class="row-val"><span class="cell-badge badge-success">success</span></div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">OpenedAt</div><div class="row-val">2026-03-11T19:04Z</div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">SyncType</div><div class="row-val">original</div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">LastActivity</div><div class="row-val">email_opened: 2026-03-11…</div></div>
+          <div class="record-row"><div class="row-dot green"></div><div class="row-key">OpenCount</div><div class="row-val">1</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet-preview">
+      <div class="sheet-tabs">
+        <div class="sheet-tab active">📊 HubSpot Sync</div>
+        <div class="sheet-tab">📋 Follow-Up Record</div>
+        <div class="sheet-tab">📧 Email Campaign</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="sheet-table">
+          <thead>
+            <tr>
+              <th>Email</th><th>HubSpotContactID</th><th>ArticleTitle</th>
+              <th>SentAt</th><th>SyncStatus</th><th>OpenedAt</th>
+              <th>SyncType</th><th>OpenCount</th><th>TrackingID</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="cell-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7c10051d121b4a444a444a453c1b111d1510521f1311">[email&#160;protected]</a></span></td>
+              <td>454647561932</td><td>ai power 2026 big techs nuclear…</td>
+              <td>2026-03-10T19:28Z</td>
+              <td><span class="cell-badge badge-success">success</span></td>
+              <td>2026-03-11T19:04Z</td><td>original</td><td>1</td><td>trk_177324…_9440</td>
+            </tr>
+            <tr>
+              <td><span class="cell-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cabaaba9a2a3b9e4ada3a5b8ada5b9f2f28aada7aba3a6e4a9a5a7">[email&#160;protected]</a></span></td>
+              <td>454757882596</td><td>maerks 2025 fuel cell strategy…</td>
+              <td>2026-03-19T09:08Z</td>
+              <td><span class="cell-badge badge-success">success</span></td>
+              <td>2026-03-11T20:28Z</td><td>original</td><td>—</td><td>trk_177325…_1043</td>
+            </tr>
+            <tr>
+              <td><span class="cell-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="076663756e6669363534296b6e47606a666e6b2964686a">[email&#160;protected]</a></span></td>
+              <td>453333431019</td><td>nvidia power strategy 2025…</td>
+              <td>2026-03-09T06:36Z</td>
+              <td><span class="cell-badge badge-success">success</span></td>
+              <td>2026-03-11T17:53Z</td><td>original</td><td>3</td><td>trk_177312…_3679</td>
+            </tr>
+            <tr>
+              <td><span class="cell-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="87e6fee4e8edeeeae4eff5eef4f3eee6e9c7e0eae6eeeba9e4e8ea">[email&#160;protected]</a></span></td>
+              <td>453269938878</td><td>southern company energy storage…</td>
+              <td>2026-02-24T13:36Z</td>
+              <td><span class="cell-badge badge-success">success</span></td>
+              <td>—</td><td>followup</td><td>—</td><td>—</td>
+            </tr>
+            <tr>
+              <td><span class="cell-blurred"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d0bbb6b7b5e7e1e7e3e8e490b7bdb1b9bcfeb3bfbd">[email&#160;protected]</a></span></td>
+              <td>454738159317</td><td>sustaera dac initiatives 2025…</td>
+              <td>2026-03-21T05:42Z</td>
+              <td><span class="cell-badge badge-success">success</span></td>
+              <td>—</td><td>original</td><td>—</td><td>trk_177326…_1998</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sheet-note">
+        ⚠️ Contact emails blurred for privacy · Live data from Google Sheets · Auto-updated by n8n workflows
+      </div>
+    </div>
+  </section>
+
+  <section id="safety">
+    <div class="section-label">06 — Safety</div>
+    <h2>Automation Safety Controls</h2>
+    <p class="section-desc">
+      Built-in guardrails that prevent data corruption, duplicate sends, and false analytics.
+    </p>
+    <div class="safety-grid">
+      <div class="safety-card">
+        <div class="safety-icon">🚫</div>
+        <div>
+          <div class="safety-name">Invalid Email Filtering</div>
+          <div class="safety-desc">Emails flagged as invalid in Google Sheets are skipped before send to protect sender reputation.</div>
+        </div>
+      </div>
+      <div class="safety-card">
+        <div class="safety-icon">⛔</div>
+        <div>
+          <div class="safety-name">Duplicate Email Prevention</div>
+          <div class="safety-desc">The system checks existing records before sending to ensure no contact receives the same email twice.</div>
+        </div>
+      </div>
+      <div class="safety-card">
+        <div class="safety-icon">🕐</div>
+        <div>
+          <div class="safety-name">Sender Preview Detection</div>
+          <div class="safety-desc">Opens within 2 minutes of send time are ignored — typically caused by the sender's own email client preview.</div>
+        </div>
+      </div>
+      <div class="safety-card">
+        <div class="safety-icon">🔁</div>
+        <div>
+          <div class="safety-name">Duplicate Open Detection</div>
+          <div class="safety-desc">Consecutive opens within 30 seconds of the previous open are filtered to prevent inflated open counts.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="benefits">
+    <div class="section-label">07 — Benefits</div>
+    <h2>Why This System</h2>
+    <p class="section-desc">What this platform delivers compared to manual outreach.</p>
+
+    <div class="benefits-row">
+      <div class="benefit-pill"><span class="icon">⚡</span> Fully automated outreach</div>
+      <div class="benefit-pill"><span class="icon">🤖</span> AI-personalized at scale</div>
+      <div class="benefit-pill"><span class="icon">📡</span> Real-time open analytics</div>
+      <div class="benefit-pill"><span class="icon">📈</span> Full CRM activity tracking</div>
+      <div class="benefit-pill"><span class="icon">🔁</span> Smart follow-up sequences</div>
+      <div class="benefit-pill"><span class="icon">⏱️</span> Zero manual work after setup</div>
+    </div>
+
+    <div class="summary-box">
+      <div class="summary-box-label">System Summary</div>
+      <p>
+        This platform is an <strong>AI-driven outreach and intelligence tracking system</strong>
+        designed to automate research email campaigns while capturing engagement data and
+        syncing all activity into HubSpot for full pipeline visibility — eliminating
+        manual tracking entirely.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">⚡ Enki.ai</div>
+        <div class="footer-tagline">AI-Powered Research &amp; Email Automation</div>
+        <div style="margin-top:16px;">
+          <span class="stack-tag tag-amber" style="margin-top:0;">v2.0 · Live</span>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Team</div>
+        <div class="footer-person">
+          <div class="footer-person-name">Erhan Eren</div>
+          <div class="footer-person-role">Chief Executive Officer</div>
+          <div class="footer-person-co">Enki.ai</div>
+        </div>
+        <div class="footer-person">
+          <div class="footer-person-name">Melissa Borjal</div>
+          <div class="footer-person-role">Head of Marketing Operations</div>
+          <div class="footer-person-co">Enki.ai</div>
+        </div>
+        <div class="footer-person">
+          <div class="footer-person-name">Jim Christian Ayco</div>
+          <div class="footer-person-role">Automation Developer</div>
+          <div class="footer-person-co">Enki.ai</div>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Stack</div>
+        <div class="footer-stack-list">
+          <span>Claude / Gemini AI</span>
+          <span>n8n Automation</span>
+          <span>Google Sheets</span>
+          <span>Gmail API</span>
+          <span>HubSpot CRM</span>
+          <span>TrackingID Pixel</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">&copy; 2026 Enki.ai &mdash; All rights reserved</div>
+      <div class="footer-mark">AI Email Automation Platform v2.0</div>
+    </div>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
